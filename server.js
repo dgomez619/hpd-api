@@ -15,7 +15,7 @@ const app = express();
 // Middleware
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'https://hpdvnz.netlify.app/'], // REPLACE with your actual frontend URL
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'], // ADD x-auth-token HERE
   credentials: true
@@ -56,10 +56,5 @@ res.send('Servidor de Hospedaje por Dias está en línea.');
 
 
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-
-console.log(`Servidor corriendo en el puerto ${PORT}`);
-
-});
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
