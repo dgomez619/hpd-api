@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Property = require('../models/Property');
+const { parseISO, areIntervalsOverlapping } = require('date-fns');
 
-// --- ADD THIS ROUTE HERE (Get All) ---
+
 // @route   GET api/properties
 // @desc    Get all properties (Public)
 router.get('/', async (req, res) => {
   try {
-    // This fetches every house in your DB and sorts by newest first
     const properties = await Property.find().sort({ createdAt: -1 });
     res.json(properties);
   } catch (err) {
@@ -17,15 +17,27 @@ router.get('/', async (req, res) => {
   }
 });
 
-// --- KEEP THIS ONE BELOW (Get Single) ---
 // @route   GET api/properties/:id
-// @desc    Get a single property by its ID (Public)
 router.get('/:id', async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
+    
     if (!property) {
       return res.status(404).json({ msg: 'Propiedad no encontrada' });
     }
+
+// Clean up expired blocks to keep the database light and fast
+    // Now 'property' is defined because we just found it in the DB!
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    property.blockedDates = property.blockedDates.filter(block => {
+        return new Date(block.endDate) >= today;
+    });
+
+    // Save the "cleaned" version back to the database automatically
+    await property.save();
+
     res.json(property);
   } catch (err) {
     if (err.kind === 'ObjectId') return res.status(404).json({ msg: 'ID inválido' });
@@ -34,46 +46,90 @@ router.get('/:id', async (req, res) => {
 });
 
 // @route   POST api/properties
-// @desc    Add new property (Private - Admin only)
 router.post('/', auth, async (req, res) => {
-  const { title, location, description, pricePerNight, beds, baths, images, amenities } = req.body;
-
+  const { title, location, description, pricePerNight, beds, baths, images, amenities, externalSyncLinks } = req.body;
   try {
     const newProperty = new Property({
-      title,
-      location,
-      description,
-      pricePerNight,
-      beds,
-      baths,
-      images,
-      amenities
+      title, location, description, pricePerNight, beds, baths, images, amenities, externalSyncLinks
     });
-
     const property = await newProperty.save();
     res.json(property);
   } catch (err) {
-    console.error(err.message);
     res.status(500).send('Error al guardar la propiedad');
   }
 });
 
-// @route   DELETE api/properties/:id
-// @desc    Delete a property (Private - Admin only)
-router.delete('/:id', auth, async (req, res) => {
+// @route   PUT api/properties/:id
+router.put('/:id', auth, async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
-
-    if (!property) {
-      return res.status(404).json({ msg: 'Propiedad no encontrada' });
-    }
-
-    await property.deleteOne();
-    res.json({ msg: 'Propiedad eliminada correctamente' });
+    // We use findByIdAndUpdate to handle everything in one go, including new sync links
+    const property = await Property.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+    if (!property) return res.status(404).json({ msg: 'Propiedad no encontrada' });
+    res.json(property);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error al eliminar la propiedad');
+    res.status(500).send('Error al actualizar la propiedad');
   }
+});
+
+// @route   POST api/properties/:id/block
+// @desc    Add a manual date block
+router.post('/:id/block', auth, async (req, res) => {
+    try {
+        const { startDate, endDate, source } = req.body;
+        const property = await Property.findById(req.params.id);
+
+        if (!property) return res.status(404).json({ msg: "Propiedad no encontrada" });
+
+        const newInterval = {
+            start: parseISO(startDate),
+            end: parseISO(endDate)
+        };
+
+        const hasConflict = property.blockedDates.some(existingBlock => {
+            const existingInterval = {
+                start: new Date(existingBlock.startDate),
+                end: new Date(existingBlock.endDate)
+            };
+            return areIntervalsOverlapping(newInterval, existingInterval, { inclusive: true });
+        });
+
+        if (hasConflict) {
+            return res.status(400).json({ msg: "Conflicto de fechas: Este periodo ya está ocupado." });
+        }
+
+        property.blockedDates.push({
+            startDate: newInterval.start,
+            endDate: newInterval.end,
+            source: source || 'Manual'
+        });
+
+        await property.save();
+        res.json({ msg: "Bloqueo exitoso", property });
+    } catch (err) {
+        res.status(500).json({ msg: "Error interno del servidor" });
+    }
+});
+
+// @route   DELETE api/properties/:id/block/:blockId
+// @desc    Remove a specific date block
+router.delete('/:id/block/:blockId', auth, async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id);
+        if (!property) return res.status(404).json({ msg: "Propiedad no encontrada" });
+        
+        property.blockedDates = property.blockedDates.filter(
+            block => block._id.toString() !== req.params.blockId
+        );
+
+        await property.save();
+        res.json({ msg: "Bloqueo eliminado" });
+    } catch (err) {
+        res.status(500).json({ msg: "Error al eliminar bloqueo" });
+    }
 });
 
 // @route   DELETE api/properties/:id
@@ -81,46 +137,13 @@ router.delete('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ msg: 'Propiedad no encontrada' });
 
-    if (!property) {
-      return res.status(404).json({ msg: 'Propiedad no encontrada' });
-    }
-
-    // Perform the deletion
     await property.deleteOne();
-    
     res.json({ msg: 'Propiedad eliminada permanentemente' });
   } catch (err) {
-    console.error(err.message);
-    // If the ID is formatted incorrectly, MongoDB throws an error
-    if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'ID de propiedad no válido' });
-    }
-    res.status(500).send('Error del servidor al eliminar');
-  }
-});
-
-// @route   PUT api/properties/:id
-// @desc    Update an existing property
-router.put('/:id', auth, async (req, res) => {
-  try {
-    let property = await Property.findById(req.params.id);
-
-    if (!property) {
-      return res.status(404).json({ msg: 'Propiedad no encontrada' });
-    }
-
-    // Update the property with the data sent in the request body
-    property = await Property.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true } // This returns the updated version of the document
-    );
-
-    res.json(property);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error al actualizar la propiedad');
+    if (err.kind === 'ObjectId') return res.status(404).json({ msg: 'ID no válido' });
+    res.status(500).send('Error del servidor');
   }
 });
 
