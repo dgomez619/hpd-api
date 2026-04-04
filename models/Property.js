@@ -9,8 +9,44 @@ const propertySchema = new mongoose.Schema({
   baths: Number,
   images: [String],
   amenities: [String],
-  iCalUrl: String, // For the future Google Calendar sync
+  category: {type: String, default: 'Apartamento'}, // NEW: Property category (e.g., Apartment, House, etc.)
+  
+  // NEW: Support for multiple external calendars (Airbnb, Booking, etc.)
+  externalSyncLinks: [
+    {
+      platform: { type: String, required: true }, // e.g., 'Airbnb'
+      url: { type: String, required: true },      // The .ics link they give you
+      lastSynced: { type: Date, default: Date.now }
+    }
+  ],
+
+  // NEW: Manual date blocking (for maintenance or owner use)
+  // Format: ['2026-05-10', '2026-05-11']
+// Inside your Property Schema
+blockedDates: [
+  {
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    source: { 
+      type: String, 
+      enum: ['Airbnb', 'Booking.com', 'Manual', 'Direct-Booking'], 
+      default: 'Manual' 
+    },
+    externalId: String, // To store the UID from the Airbnb/Booking .ics file
+    lastSynced: { type: Date, default: Date.now }
+  }
+],
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
+
+// VIRTUAL: Generate the Export URL on the fly (No need to store it)
+// This is the link you give to Airbnb.
+propertySchema.virtual('exportUrl').get(function() {
+  const baseUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+  return `${baseUrl}/api/export/${this._id}.ics`;
+});
+
+// Ensure virtuals are included when converting to JSON
+propertySchema.set('toJSON', { virtuals: true });
 
 module.exports = mongoose.model('Property', propertySchema);
