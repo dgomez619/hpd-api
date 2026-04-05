@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const app = express();
 
+const syncRoutes = require('./routes/sync'); // 1. Import the sync route
+
 // Middleware
 app.use(cors({
   // FIXED: Removed the trailing slash from the Netlify URL
@@ -19,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
+app.use('/api/sync', syncRoutes); // 2. Use the sync route
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
