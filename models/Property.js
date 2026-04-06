@@ -25,16 +25,19 @@ const propertySchema = new mongoose.Schema({
   // NEW: Manual date blocking (for maintenance or owner use)
   // Format: ['2026-05-10', '2026-05-11']
 // Inside your Property Schema
+// models/Property.js
+
 blockedDates: [
   {
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     source: { 
       type: String, 
+      // Add 'Booking' here to match your current frontend value
       enum: ['Airbnb', 'Booking.com', 'Booking', 'Manual', 'Direct-Booking'], 
       default: 'Manual' 
     },
-    externalId: String, // To store the UID from the Airbnb/Booking .ics file
+    externalId: String,
     lastSynced: { type: Date, default: Date.now }
   }
 ],
