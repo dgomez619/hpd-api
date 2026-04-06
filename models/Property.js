@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const propertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   location: { type: String, required: true },
-  description: { type: String, required: true },
+// REPLACING 'description' with localized versions
+  description_es: { type: String, required: true },
+  description_en: { type: String, required: true },
   pricePerNight: { type: Number, required: true },
   beds: Number,
   baths: Number,
