@@ -22,6 +22,13 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/sync', syncRoutes); // 2. Use the sync route
+app.use('/api/export', require('./routes/exports'));
+
+// Error handling middleware (optional, for better error responses)
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ msg: 'Error interno del servidor' });
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
