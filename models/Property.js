@@ -31,7 +31,7 @@ blockedDates: [
     endDate: { type: Date, required: true },
     source: { 
       type: String, 
-      enum: ['Airbnb', 'Booking.com', 'Manual', 'Direct-Booking'], 
+      enum: ['Airbnb', 'Booking.com', 'Booking', 'Manual', 'Direct-Booking'], 
       default: 'Manual' 
     },
     externalId: String, // To store the UID from the Airbnb/Booking .ics file
