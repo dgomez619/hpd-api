@@ -47,17 +47,18 @@ router.get('/:id', async (req, res) => {
 
 // @route   POST api/properties
 router.post('/', auth, async (req, res) => {
-  const { title, location, description, pricePerNight, beds, baths, images, amenities, externalSyncLinks } = req.body;
+  const { title, location, description_es, description_en, pricePerNight, beds, baths, images, amenities, category, externalSyncLinks } = req.body;
   try {
     const newProperty = new Property({
-      title, location, description, pricePerNight, beds, baths, images, amenities, externalSyncLinks
+      title, location, description_es, description_en, pricePerNight, beds, baths, images, amenities, category, externalSyncLinks
     });
     const property = await newProperty.save();
     res.json(property);
   } catch (err) {
-    res.status(500).send('Error al guardar la propiedad');
+    console.error('Error en POST /properties:', err.message);
+    res.status(500).json({ msg: 'Error al guardar la propiedad', detail: err.message });
   }
-});
+})
 
 // @route   PUT api/properties/:id
 router.put('/:id', auth, async (req, res) => {
@@ -71,7 +72,8 @@ router.put('/:id', auth, async (req, res) => {
     if (!property) return res.status(404).json({ msg: 'Propiedad no encontrada' });
     res.json(property);
   } catch (err) {
-    res.status(500).send('Error al actualizar la propiedad');
+    console.error('Error en PUT /properties:', err.message);
+    res.status(500).json({ msg: 'Error al actualizar la propiedad', detail: err.message });
   }
 });
 
