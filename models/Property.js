@@ -1,46 +1,34 @@
 const mongoose = require('mongoose');
 
 const propertySchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  // LOCALIZED TITLES
+  title_es: { type: String, required: true },
+  title_en: { type: String, required: true },
+
   location: { type: String, required: true },
-// REPLACING 'description' with localized versions
+
+  // LOCALIZED DESCRIPTIONS
   description_es: { type: String, required: true },
   description_en: { type: String, required: true },
+
+  // MEASUREMENTS (Stored in Square Meters m²)
+  sqm: { type: Number, required: true }, 
+
   pricePerNight: { type: Number, required: true },
   beds: Number,
   baths: Number,
   images: [String],
+
+  // AMENITIES (Stored as IDs for the Tag System)
+  // Example: ['wifi', 'pool', 'ac']
   amenities: [String],
-  category: {type: String, default: 'Apartamento'}, // NEW: Property category (e.g., Apartment, House, etc.)
+
+  // LOCALIZED CATEGORY (BADGE)
+  category_es: { type: String, default: 'Apartamento' },
+  category_en: { type: String, default: 'Apartment' },
   
-  // NEW: Support for multiple external calendars (Airbnb, Booking, etc.)
-  externalSyncLinks: [
-    {
-      platform: { type: String, required: true }, // e.g., 'Airbnb'
-      url: { type: String, required: true },      // The .ics link they give you
-      lastSynced: { type: Date, default: Date.now }
-    }
-  ],
-
-  // NEW: Manual date blocking (for maintenance or owner use)
-  // Format: ['2026-05-10', '2026-05-11']
-// Inside your Property Schema
-// models/Property.js
-
-blockedDates: [
-  {
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    source: { 
-      type: String, 
-      // Add 'Booking' here to match your current frontend value
-      enum: ['Airbnb', 'Booking.com', 'Booking', 'Manual', 'Direct-Booking'], 
-      default: 'Manual' 
-    },
-    externalId: String,
-    lastSynced: { type: Date, default: Date.now }
-  }
-],
+  externalSyncLinks: [/* ... existing logic ... */],
+  blockedDates: [/* ... existing logic ... */],
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
