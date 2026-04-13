@@ -47,10 +47,10 @@ router.get('/:id', async (req, res) => {
 
 // @route   POST api/properties
 router.post('/', auth, async (req, res) => {
-  const { title, location, description_es, description_en, pricePerNight, beds, baths, images, amenities, category, externalSyncLinks } = req.body;
+  const { title_es, title_en, location, description_es, description_en, sqm, pricePerNight, beds, baths, images, amenities, category_es, category_en, externalSyncLinks } = req.body;
   try {
     const newProperty = new Property({
-      title, location, description_es, description_en, pricePerNight, beds, baths, images, amenities, category, externalSyncLinks
+      title_es, title_en, location, description_es, description_en, sqm, pricePerNight, beds, baths, images, amenities, category_es, category_en, externalSyncLinks
     });
     const property = await newProperty.save();
     res.json(property);
