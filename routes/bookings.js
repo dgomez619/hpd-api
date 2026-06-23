@@ -72,4 +72,22 @@ router.patch('/:id', auth, async (req, res) => {
   }
 });
 
+// @route   DELETE api/bookings/:id
+// @desc    Admin deletes a booking request
+// @access  Private (Admin only)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const deletedRequest = await BookingRequest.findByIdAndDelete(req.params.id);
+
+    if (!deletedRequest) {
+      return res.status(404).json({ message: 'Solicitud no encontrada' });
+    }
+
+    res.json({ message: 'Solicitud eliminada correctamente' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error al eliminar la solicitud');
+  }
+});
+
 module.exports = router;

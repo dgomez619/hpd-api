@@ -7,11 +7,12 @@ const app = express();
 
 const syncRoutes = require('./routes/sync');
 const bookingRoutes = require('./routes/bookings'); // 1. IMPORT the new booking routes
+const serviceRoutes = require('./routes/services');
 
 // Middleware
 app.use(cors({
   origin: ['http://localhost:5173', 'https://hpdvnz.netlify.app'], 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true
 }));
@@ -24,6 +25,7 @@ app.use('/api/properties', require('./routes/properties'));
 app.use('/api/sync', syncRoutes);
 app.use('/api/export', require('./routes/exports'));
 app.use('/api/bookings', bookingRoutes); // 2. REGISTER the bookings route
+app.use('/api/services', serviceRoutes);
 
 
 // Error handling middleware
