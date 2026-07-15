@@ -17,6 +17,43 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   POST api/properties/:id/availability
+// @desc    Advisory availability check; inquiries remain allowed regardless of the result
+router.post('/:id/availability', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ msg: 'Rango de fechas inválido' });
+    }
+
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start < today || end <= start) {
+      return res.status(400).json({ msg: 'Rango de fechas inválido' });
+    }
+
+    const property = await Property.findById(req.params.id).select('blockedDates');
+    if (!property) {
+      return res.status(404).json({ msg: 'Propiedad no encontrada' });
+    }
+
+    // Stays use [check-in, check-out), so adjacent stays do not overlap.
+    const conflicts = property.blockedDates.filter((block) => {
+      const blockStart = new Date(block.startDate);
+      const blockEnd = new Date(block.endDate);
+      return start < blockEnd && end > blockStart;
+    });
+
+    res.json({ mayBeUnavailable: conflicts.length > 0 });
+  } catch (err) {
+    console.error('Error en POST /availability:', err.message);
+    res.status(500).json({ msg: 'Error del servidor al consultar disponibilidad' });
+  }
+});
+
 // @route   GET api/properties/:id
 router.get('/:id', async (req, res) => {
   try {
