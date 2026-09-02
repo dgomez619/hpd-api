@@ -8,6 +8,7 @@ const app = express();
 const syncRoutes = require('./routes/sync');
 const bookingRoutes = require('./routes/bookings'); // 1. IMPORT the new booking routes
 const serviceRoutes = require('./routes/services');
+const shareRoutes = require('./routes/share');
 
 // Middleware
 app.use(cors({
@@ -20,13 +21,13 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.use('/share', shareRoutes);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/sync', syncRoutes);
 app.use('/api/export', require('./routes/exports'));
 app.use('/api/bookings', bookingRoutes); // 2. REGISTER the bookings route
 app.use('/api/services', serviceRoutes);
-
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -11,17 +11,23 @@ router.post('/', async (req, res) => {
     const { 
       propertyId, 
       guestName, 
-      contactInfo, 
+      email,
+      whatsapp,
       startDate, 
       endDate, 
       guests, 
       totalPrice 
     } = req.body;
 
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ msg: 'Se requiere un correo electrónico válido' });
+    }
+
     const newRequest = new BookingRequest({
       propertyId,
       guestName,
-      contactInfo,
+      email,
+      whatsapp,
       startDate,
       endDate,
       guests,

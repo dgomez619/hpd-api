@@ -29,7 +29,8 @@ const propertySchema = new mongoose.Schema({
   
   externalSyncLinks: [/* ... existing logic ... */],
   blockedDates: [/* ... existing logic ... */],
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  displayOrder: { type: Number, default: null }
 }, { timestamps: true });
 
 // VIRTUAL: Generate the Export URL on the fly (No need to store it)
