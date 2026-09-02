@@ -14,10 +14,16 @@ const bookingRequestSchema = new mongoose.Schema({
     required: true,
     trim: true 
   },
-  contactInfo: { 
+  email: {
     type: String, 
-    required: true, 
-    trim: true // This will store their Email or WhatsApp number
+    required: true,
+    trim: true,
+    lowercase: true
+  },
+  whatsapp: {
+    type: String,
+    trim: true,
+    default: ''
   },
   
   // Reservation Details

@@ -4,16 +4,53 @@ const auth = require('../middleware/auth');
 const Property = require('../models/Property');
 const { parseISO, areIntervalsOverlapping } = require('date-fns');
 
+const sortPropertiesForDisplay = (list) => {
+  return [...list].sort((a, b) => {
+    const aOrder = typeof a.displayOrder === 'number' ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+    const bOrder = typeof b.displayOrder === 'number' ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+};
+
 
 // @route   GET api/properties
 // @desc    Get all properties (Public)
 router.get('/', async (req, res) => {
   try {
-    const properties = await Property.find().sort({ createdAt: -1 });
-    res.json(properties);
+    const properties = await Property.find();
+    res.json(sortPropertiesForDisplay(properties));
   } catch (err) {
     console.error("Error en GET /:", err.message);
     res.status(500).json({ msg: 'Error del servidor al obtener propiedades' });
+  }
+});
+
+// @route   PATCH api/properties/reorder
+// @desc    Persist manual order for properties
+router.patch('/reorder', auth, async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ msg: 'orderedIds debe ser un arreglo no vacío' });
+    }
+
+    const bulkOps = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { displayOrder: index + 1 } }
+      }
+    }));
+
+    await Property.bulkWrite(bulkOps, { ordered: true });
+
+    const properties = await Property.find();
+    res.json(sortPropertiesForDisplay(properties));
+  } catch (err) {
+    console.error('Error en PATCH /reorder:', err.message);
+    res.status(500).json({ msg: 'Error del servidor al reordenar propiedades' });
   }
 });
 
@@ -86,8 +123,12 @@ router.get('/:id', async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const { title_es, title_en, location, description_es, description_en, sqm, pricePerNight, beds, baths, images, amenities, category_es, category_en, externalSyncLinks } = req.body;
   try {
+    const lastProperty = await Property.findOne({ displayOrder: { $ne: null } }).sort({ displayOrder: -1 }).select('displayOrder');
+    const nextDisplayOrder = lastProperty?.displayOrder ? lastProperty.displayOrder + 1 : 1;
+
     const newProperty = new Property({
-      title_es, title_en, location, description_es, description_en, sqm, pricePerNight, beds, baths, images, amenities, category_es, category_en, externalSyncLinks
+      title_es, title_en, location, description_es, description_en, sqm, pricePerNight, beds, baths, images, amenities, category_es, category_en, externalSyncLinks,
+      displayOrder: nextDisplayOrder
     });
     const property = await newProperty.save();
     res.json(property);
