@@ -3,6 +3,7 @@ const router = express.Router();
 const Service = require('../models/Service');
 const ServiceInquiry = require('../models/ServiceInquiry');
 const auth = require('../middleware/auth'); // Admin protection
+const { publicFormLimiter, honeypotGuard, turnstileGuard } = require('../middleware/antiBot');
 
 // --- PUBLIC ROUTES ---
 
@@ -17,7 +18,7 @@ router.get('/', async (req, res) => {
 });
 
 // 2. Submit a new service inquiry
-router.post('/inquire', async (req, res) => {
+router.post('/inquire', publicFormLimiter, honeypotGuard, turnstileGuard, async (req, res) => {
   try {
     const newInquiry = new ServiceInquiry(req.body);
     const saved = await newInquiry.save();

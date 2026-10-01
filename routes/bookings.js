@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const BookingRequest = require('../models/BookingRequest');
 const auth = require('../middleware/auth'); // Your admin auth middleware
+const { publicFormLimiter, honeypotGuard, turnstileGuard } = require('../middleware/antiBot');
 
 // @route   POST api/bookings
 // @desc    Guest creates a new booking request
 // @access  Public
-router.post('/', async (req, res) => {
+router.post('/', publicFormLimiter, honeypotGuard, turnstileGuard, async (req, res) => {
   try {
     const { 
       propertyId, 
