@@ -11,6 +11,7 @@ const serviceSchema = new mongoose.Schema({
   image: { type: String, required: true }, 
   priceInfo: { type: String }, 
   isActive: { type: Boolean, default: true },
+  isAvailable: { type: Boolean, default: false },
   isFeatured: { type: Boolean, default: false }
 }, { timestamps: true });
 

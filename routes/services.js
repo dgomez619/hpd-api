@@ -20,6 +20,15 @@ router.get('/', async (req, res) => {
 // 2. Submit a new service inquiry
 router.post('/inquire', publicFormLimiter, honeypotGuard, turnstileGuard, async (req, res) => {
   try {
+    const service = await Service.findOne({
+      _id: req.body.serviceId,
+      isActive: true,
+      isAvailable: { $ne: false }
+    });
+    if (!service) {
+      return res.status(409).json({ msg: 'El servicio no está disponible actualmente' });
+    }
+
     const newInquiry = new ServiceInquiry(req.body);
     const saved = await newInquiry.save();
     res.status(201).json(saved);
@@ -30,7 +39,17 @@ router.post('/inquire', publicFormLimiter, honeypotGuard, turnstileGuard, async 
 
 // --- ADMIN ROUTES ---
 
-// 3. Create a new service (Admin only)
+// 3. Get every service for the management dashboard, including paused ones.
+router.get('/admin', auth, async (req, res) => {
+  try {
+    const services = await Service.find().sort({ createdAt: -1 });
+    res.json(services);
+  } catch (err) {
+    res.status(500).json({ msg: 'Error fetching services' });
+  }
+});
+
+// 4. Create a new service (Admin only)
 router.post('/', auth, async (req, res) => {
   try {
     const service = new Service(req.body);
@@ -41,7 +60,37 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// 4. Get all inquiries for the Admin Inbox
+// 5. Update a service (Admin only)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const allowedFields = [
+      'title_en',
+      'title_es',
+      'description_en',
+      'description_es',
+      'category',
+      'image',
+      'priceInfo',
+      'isActive',
+      'isAvailable'
+    ];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([key]) => allowedFields.includes(key))
+    );
+
+    const service = await Service.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+      runValidators: true
+    });
+    if (!service) return res.status(404).json({ msg: 'Servicio no encontrado' });
+
+    res.json(service);
+  } catch (err) {
+    res.status(400).json({ msg: 'Error updating service' });
+  }
+});
+
+// 6. Get all inquiries for the Admin Inbox
 router.get('/inquiries', auth, async (req, res) => {
   try {
     const inquiries = await ServiceInquiry.find()
@@ -53,7 +102,7 @@ router.get('/inquiries', auth, async (req, res) => {
   }
 });
 
-// 5. Toggle Service Status (Admin only)
+// 7. Toggle Service publication status (Admin only)
 router.patch('/:id/toggle', auth, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -65,6 +114,21 @@ router.patch('/:id/toggle', auth, async (req, res) => {
     res.json(service);
   } catch (err) {
     res.status(500).json({ msg: 'Error al cambiar el estado' });
+  }
+});
+
+// 8. Toggle whether a published service accepts new inquiries (Admin only)
+router.patch('/:id/availability', auth, async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ msg: 'Servicio no encontrado' });
+
+    service.isAvailable = !service.isAvailable;
+    await service.save();
+
+    res.json(service);
+  } catch (err) {
+    res.status(500).json({ msg: 'Error al cambiar la disponibilidad' });
   }
 });
 
